@@ -7,7 +7,9 @@ const Distributor = ({ distributor, onAddSales, onDelete, getTreeDepth }) => {
 
   return (
     <div className="distributor">
-      <h4>{distributor.name} ({distributor.code})</h4>
+      <h4>
+        {distributor.name} ({distributor.code})
+      </h4>
       <p>Sales: {distributor.sales}</p>
       <div className="actions">
         <button onClick={() => onAddSales(distributor.code)}>Add Sales</button>
@@ -32,17 +34,16 @@ const Distributor = ({ distributor, onAddSales, onDelete, getTreeDepth }) => {
 };
 
 const App = () => {
-  const [trees, setTrees] = useState([]);  // Các cây đã được tạo
+  const [trees, setTrees] = useState([]); // Các cây đã được tạo
   const [distributors, setDistributors] = useState({}); // Tất cả các nhà phân phối
 
   const getTreeDepth = (nodeId) => {
     const node = distributors[nodeId];
     if (!node) return 0;
-  
-    // Nếu là node gốc hoặc là root của một cây mới
-    if (!node.parentCode || trees.some(tree => tree.code === nodeId)) return 1;
-  
-    // Đệ quy lên parent và cộng thêm 1 cho level hiện tại
+
+    // neu la node root
+    if (!node.parentCode) return 1;
+    // goi de quy
     return getTreeDepth(node.parentCode) + 1;
   };
 
@@ -53,48 +54,58 @@ const App = () => {
     }
 
     const newDistributor = { code, name, parentCode, sales: 0, children: [] };
-    
-    
+
     if (!parentCode) {
+      // neu khong co ma cap tren thi tao luon cay moi
       setTrees([...trees, newDistributor]);
       setDistributors({ ...distributors, [code]: newDistributor });
+      return;
+    }
+
+    const parent = distributors[parentCode];
+
+    if (!parent) {
+      alert("Parent distributor not found.");
+      return;
+    }
+
+    // neu do sau cua cay bang 5, tao cay moi
+    if (getTreeDepth(parent.code) === 5) {
+      newDistributor.parentCode = "";
+      setTrees((prevTrees) => [...prevTrees, newDistributor]);
     } else {
-      const updatedDistributors = { ...distributors };
-      const parent = updatedDistributors[parentCode];
+      addChildToTree(parent, newDistributor);
+    }
+    setDistributors({ ...distributors, [code]: newDistributor });
+  };
 
-      if (parent) {
-        
-        if (parent.children.length < 2) {
-          parent.children.push(newDistributor);
-          if (getTreeDepth(parent.code) === 5) {
-            setTrees(prevTrees => [...prevTrees, newDistributor]);
-          }
-        } else {
-          const queue = [...parent.children];
-          // Debug: Kiểm tra queue
-          //console.log('Queue before processing:', queue);
-          
-          while (queue.length) {
-            const current = queue.shift();
-            // Debug: Kiểm tra node hiện tại
-            //console.log('Current node:', current);
-            
-            if (current.children.length < 2) {
-              current.children.push(newDistributor);
-              if (getTreeDepth(current.code) === 5) {
-                setTrees(prevTrees => [...prevTrees, newDistributor]);  // Lưu object thay vì code
-              }
-              break;
-            }
-            queue.push(...current.children);
-          }
-        }
+  // parent co do sau < 5
+  const addChildToTree = (parent, newDistributor) => {
+    if (parent.children.length < 2) {
+      parent.children.push(newDistributor);
+      newDistributor.parentCode = parent.code;
+      return;
+    }
+    const queue = [...parent.children];
 
+    while (queue.length) {
+      const current = queue.shift();
 
-
-        updatedDistributors[code] = newDistributor;
-        setDistributors(updatedDistributors);
+      // neu depth current = 5, tao cay moi
+      if (getTreeDepth(current.code) === 5) {
+        newDistributor.parentCode = "";
+        setTrees((prevTrees) => [...prevTrees, newDistributor]);
+        return;
       }
+
+      // Neu current co do sau < 5, kiem tra xem co them con duoc khong
+      if (current.children.length < 2) {
+        current.children.push(newDistributor);
+        newDistributor.parentCode = current.code;
+        return;
+      }
+      // neu khong them con duoc, thi tiep tuc duyet do thi
+      queue.push(...current.children);
     }
   };
 
@@ -111,92 +122,125 @@ const App = () => {
   };
 
   const deleteDistributor = (code) => {
-    const updatedDistributors = { ...distributors };
-    const distributor = updatedDistributors[code];
-  
-    if (!distributor) return;
-  
-    // Hàm lấy tất cả node con trong cùng cây
-    const getAllDescendantsInSameTree = (node) => {
-      let descendants = [];
-      const queue = [...node.children];
-      
-      while (queue.length > 0) {
-        const current = queue.shift();
-        // Chỉ thêm vào descendants nếu node con không phải là root của cây khác
-        if (!trees.some(tree => tree.code === current.code)) {
-          descendants.push(current);
-          queue.push(...current.children);
-        }
-      }
-      
-      return descendants;
-    };
-  
-    // Lấy danh sách tất cả node con trong cùng cây
-    const descendants = getAllDescendantsInSameTree(distributor);
-    
-    if (descendants.length > 0) {
-      // Chọn ngẫu nhiên một node con để thay thế
-      const randomIndex = Math.floor(Math.random() * descendants.length);
-      const replacementNode = descendants[randomIndex];
-  
-      // Xóa node thay thế khỏi vị trí cũ
-      const oldParent = updatedDistributors[replacementNode.parentCode];
-      if (oldParent) {
-        oldParent.children = oldParent.children.filter(
-          child => child.code !== replacementNode.code
-        );
-      }
-  
-      // Cập nhật thông tin cho node thay thế
-      replacementNode.parentCode = distributor.parentCode;
-      replacementNode.children = [...distributor.children.filter(
-        child => child.code !== replacementNode.code
-      )];
-  
-      // Cập nhật parent để trỏ đến node thay thế
-      if (distributor.parentCode) {
-        const parent = updatedDistributors[distributor.parentCode];
-        if (parent) {
-          parent.children = parent.children.map(child =>
-            child.code === code ? replacementNode : child
-          );
-        }
-      } else {
-        // Nếu xóa root, cập nhật trees
-        setTrees(prevTrees => prevTrees.map(tree =>
-          tree.code === code ? replacementNode : tree
-        ));
-      }
-  
-      // Cập nhật distributors
-      updatedDistributors[replacementNode.code] = replacementNode;
-      delete updatedDistributors[code];
-      setDistributors(updatedDistributors);
-    } else {
-      // Nếu không có node con, xóa node bình thường
-      if (distributor.parentCode) {
-        const parent = updatedDistributors[distributor.parentCode];
-        if (parent) {
-          parent.children = parent.children.filter(
-            child => child.code !== code
-          );
-        }
-      } else {
-        setTrees(prevTrees => prevTrees.filter(tree => tree.code !== code));
-      }
-      console.log(updatedDistributors);
-      delete updatedDistributors[code];
-      setDistributors(updatedDistributors);
+    const distributor = distributors[code];
+    if (!distributor) {
+      alert("Distributor not found.");
+      return;
     }
+
+    //Truong hop neu distributor la root cua cay
+    if (!distributor.parentCode) {
+      // neu cay chi co mot node la distributor
+      if (distributor.children.length === 0) {
+        // xoa cay
+        setTrees((prevTrees) => prevTrees.filter((tree) => tree.code !== code));
+        delete distributors[code];
+        alert(`Root distributor ${code} and its tree deleted.`);
+        return;
+      } else {
+        // neu root co node con
+        const randomIndex = Math.floor(
+          Math.random() * distributor.children.length
+        );
+        const replacement = distributor.children[randomIndex];
+
+        distributor.children.length === 2
+          ? rearrangeTree(replacement, distributor.children[1 - randomIndex])
+          : rearrangeTree(replacement, null);
+        replacement.parentCode = "";
+        setTrees((prevTrees) =>
+          prevTrees.map((tree) => (tree.code === code ? replacement : tree))
+        );
+
+        const updatedDistributors = { ...distributors };
+        delete updatedDistributors[code];
+        setDistributors(updatedDistributors);
+        //dang sai doan nay
+        alert(`Root distributor ${code} replaced with ${replacement.code}.`);
+        return;
+      }
+    }
+
+    //Truong hop neu distributor khong phai la root
+    const parent = distributors[distributor.parentCode];
+    if (!parent) {
+      alert("Parent not found.");
+      return;
+    }
+
+    // neu distributor khong co node con, thi xoa luon
+    if (distributor.children.length === 0) {
+      parent.children = parent.children.filter((child) => child.code !== code);
+      const updatedDistributors = { ...distributors };
+      delete updatedDistributors[code];
+      setDistributors(updatedDistributors);
+      alert(`Distributor ${code} deleted.`);
+      return;
+    }
+
+    //========================================================sai dau do o day
+    // neu distributor co con, chon ngau nhien mot con
+    const randomIndex = Math.floor(Math.random() * distributor.children.length);
+    //node thay the cho distributor
+    const replacement = distributor.children[randomIndex];
+    // console.log(randomIndex);
+    // console.log("re", replacement);
+    // console.log("len", distributor.children.length);
+
+    if (distributor.children.length === 2) {
+      //console.log("1-i", distributor.children[1 - randomIndex]);
+      if (!replacement) console.log(distributor.children.length);
+      rearrangeTree(replacement, distributor.children[1 - randomIndex]);
+    } else {
+      if (!replacement) console.log(distributor.children.length);
+      rearrangeTree(replacement, null);
+    }
+    replacement.parentCode = distributor.parentCode;
+    parent.children = parent.children.map((child) =>
+      child.code === code ? replacement : child
+    );
+
+    // xoa distributor
+    const updatedDistributors = { ...distributors };
+    delete updatedDistributors[code];
+    setDistributors(updatedDistributors);
+    alert(`Distributor ${code} deleted.`);
+    return;
+  };
+
+  const rearrangeTree = (replacement, siblingOfReplacement) => {
+    // neu replacement khong co anh em, thi return luon
+    if (!siblingOfReplacement) {
+      // console.log("yes");
+      return;
+    }
+    //console.log("he", replacement);
+
+    // neu replacement co anh em, va replacement co toi da mot node con, thi cho node anh em do lam node con cua replacement
+    if (replacement.children.length < 2) {
+      replacement.children.push(siblingOfReplacement);
+      siblingOfReplacement.parentCode = replacement.code;
+      return;
+    }
+
+    // neu replacement da co 2 con, thi lay ngau nhien 1 trong 2 node con
+    const randomIndex = Math.floor(Math.random() * 2);
+    // node con duoc chon de thay the bang siblingOfReplacement
+    // randomChildren la node giu nguyen tang cua no, con anh em cua no cung voi siblingOfReplacement la node con cua replacement
+    const randomChildren = replacement.children[randomIndex];
+    replacement.children[randomIndex] = siblingOfReplacement;
+    siblingOfReplacement.parentCode = replacement.code;
+    //console.log(replacement.children[1 - randomIndex], randomChildren);
+    rearrangeTree(replacement.children[1 - randomIndex], randomChildren);
   };
 
   const calculateCommissions = () => {
     const commissions = {};
 
     const calculate = (distributor, commissionRate = 0.1) => {
-      commissions[distributor.code] = (commissions[distributor.code] || 0) + distributor.sales * commissionRate;
+      commissions[distributor.code] =
+        (commissions[distributor.code] || 0) +
+        distributor.sales * commissionRate;
 
       if (distributor.parentCode) {
         const parent = distributors[distributor.parentCode];
@@ -223,7 +267,11 @@ const App = () => {
         <h3>Add Distributor</h3>
         <input type="text" id="code" placeholder="Code" />
         <input type="text" id="name" placeholder="Name" />
-        <input type="text" id="parentCode" placeholder="Parent Code (optional)" />
+        <input
+          type="text"
+          id="parentCode"
+          placeholder="Parent Code (optional)"
+        />
         <button
           onClick={() =>
             addDistributor(
