@@ -117,7 +117,7 @@ const App = () => {
     }
 
     const updatedDistributors = { ...distributors };
-    updatedDistributors[code].sales += amount;
+    updatedDistributors[code].sales = amount;
     setDistributors(updatedDistributors);
   };
 
@@ -234,31 +234,52 @@ const App = () => {
     rearrangeTree(replacement.children[1 - randomIndex], randomChildren);
   };
 
+  // const calculateCommissions = () => {
+  //   const commissions = {};
+
+  //   const calculate = (distributor, commissionRate = 0.1) => {
+  //     commissions[distributor.code] =
+  //       (commissions[distributor.code] || 0) +
+  //       distributor.sales * commissionRate;
+
+  //     if (distributor.parentCode) {
+  //       const parent = distributors[distributor.parentCode];
+  //       calculate(parent, commissionRate * 0.1);
+  //     }
+  //   };
+
+  //   Object.values(distributors).forEach((distributor) => {
+  //     calculate(distributor);
+  //   });
+
+  //   alert(
+  //     Object.entries(commissions)
+  //       .map(([code, commission]) => `${code}: ${commission.toFixed(2)}`)
+  //       .join("\n")
+  //   );
+  // };
+
   const calculateCommissions = () => {
     const commissions = {};
 
+    //ham de quy
     const calculate = (distributor, commissionRate = 0.1) => {
-      commissions[distributor.code] =
-        (commissions[distributor.code] || 0) +
-        distributor.sales * commissionRate;
+      if (!distributor) return 0;
 
-      if (distributor.parentCode) {
-        const parent = distributors[distributor.parentCode];
-        calculate(parent, commissionRate * 0.1);
-      }
+      commissions[distributor.code] =
+        calculate(distributor.children[0]) * 0.1 +
+        calculate(distributor.children[1]) * 0.1 +
+        distributor.sales * commissionRate;
+      return commissions[distributor.code];
     };
 
-    Object.values(distributors).forEach((distributor) => {
-      calculate(distributor);
-    });
-
+    trees.forEach((root) => calculate(root));
     alert(
       Object.entries(commissions)
         .map(([code, commission]) => `${code}: ${commission.toFixed(2)}`)
         .join("\n")
     );
   };
-
   return (
     <div className="App">
       <h1>Binary MLM Management</h1>
