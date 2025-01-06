@@ -234,31 +234,6 @@ const App = () => {
     rearrangeTree(replacement.children[1 - randomIndex], randomChildren);
   };
 
-  // const calculateCommissions = () => {
-  //   const commissions = {};
-
-  //   const calculate = (distributor, commissionRate = 0.1) => {
-  //     commissions[distributor.code] =
-  //       (commissions[distributor.code] || 0) +
-  //       distributor.sales * commissionRate;
-
-  //     if (distributor.parentCode) {
-  //       const parent = distributors[distributor.parentCode];
-  //       calculate(parent, commissionRate * 0.1);
-  //     }
-  //   };
-
-  //   Object.values(distributors).forEach((distributor) => {
-  //     calculate(distributor);
-  //   });
-
-  //   alert(
-  //     Object.entries(commissions)
-  //       .map(([code, commission]) => `${code}: ${commission.toFixed(2)}`)
-  //       .join("\n")
-  //   );
-  // };
-
   const calculateCommissions = () => {
     const commissions = {};
 
@@ -282,7 +257,7 @@ const App = () => {
   };
   return (
     <div className="App">
-      <h1>Binary MLM Management</h1>
+      <h1>Project 1 - Nguyen Anh Duong</h1>
 
       <div className="add-distributor">
         <h3>Add Distributor</h3>
