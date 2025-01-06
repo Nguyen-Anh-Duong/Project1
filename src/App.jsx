@@ -6,9 +6,9 @@ const Distributor = ({ distributor, onAddSales, onDelete, getTreeDepth }) => {
   const depth = getTreeDepth(distributor.code);
 
   return (
-    <div className="distributor">
+    <div className="distributor" data-depth={depth}>
       <h4>
-        {distributor.name} ({distributor.code})
+        {distributor.name} ({distributor.code}) - Level {depth}
       </h4>
       <p>Sales: {distributor.sales}</p>
       <div className="actions">
@@ -111,7 +111,7 @@ const App = () => {
 
   const addSales = (code) => {
     const amount = parseFloat(prompt("Enter sales amount:"));
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount) || amount < 0) {
       alert("Invalid amount.");
       return;
     }
@@ -178,17 +178,13 @@ const App = () => {
       return;
     }
 
-    //========================================================sai dau do o day
+  
     // neu distributor co con, chon ngau nhien mot con
     const randomIndex = Math.floor(Math.random() * distributor.children.length);
     //node thay the cho distributor
     const replacement = distributor.children[randomIndex];
-    // console.log(randomIndex);
-    // console.log("re", replacement);
-    // console.log("len", distributor.children.length);
 
     if (distributor.children.length === 2) {
-      //console.log("1-i", distributor.children[1 - randomIndex]);
       if (!replacement) console.log(distributor.children.length);
       rearrangeTree(replacement, distributor.children[1 - randomIndex]);
     } else {
@@ -208,13 +204,12 @@ const App = () => {
     return;
   };
 
+
   const rearrangeTree = (replacement, siblingOfReplacement) => {
     // neu replacement khong co anh em, thi return luon
     if (!siblingOfReplacement) {
-      // console.log("yes");
       return;
     }
-    //console.log("he", replacement);
 
     // neu replacement co anh em, va replacement co toi da mot node con, thi cho node anh em do lam node con cua replacement
     if (replacement.children.length < 2) {
@@ -230,7 +225,6 @@ const App = () => {
     const randomChildren = replacement.children[randomIndex];
     replacement.children[randomIndex] = siblingOfReplacement;
     siblingOfReplacement.parentCode = replacement.code;
-    //console.log(replacement.children[1 - randomIndex], randomChildren);
     rearrangeTree(replacement.children[1 - randomIndex], randomChildren);
   };
 
