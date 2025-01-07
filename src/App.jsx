@@ -15,7 +15,6 @@ const Distributor = ({ distributor, onAddSales, onDelete, getTreeDepth }) => {
         <button onClick={() => onAddSales(distributor.code)}>Add Sales</button>
         <button onClick={() => onDelete(distributor.code)}>Delete</button>
       </div>
-      {/* Chỉ hiển thị children nếu depth < 5 */}
       {depth < 5 && (
         <div className="children">
           {distributor.children.map((child) => (
@@ -178,7 +177,6 @@ const App = () => {
       return;
     }
 
-  
     // neu distributor co con, chon ngau nhien mot con
     const randomIndex = Math.floor(Math.random() * distributor.children.length);
     //node thay the cho distributor
@@ -203,7 +201,6 @@ const App = () => {
     alert(`Distributor ${code} deleted.`);
     return;
   };
-
 
   const rearrangeTree = (replacement, siblingOfReplacement) => {
     // neu replacement khong co anh em, thi return luon
@@ -241,6 +238,7 @@ const App = () => {
         distributor.sales * commissionRate;
       return commissions[distributor.code];
     };
+    console.log(distributors);
 
     trees.forEach((root) => calculate(root));
     alert(
