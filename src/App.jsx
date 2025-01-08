@@ -1,50 +1,20 @@
 import React, { useState } from "react";
 import "./App.css";
-
-const Distributor = ({ distributor, onAddSales, onDelete, getTreeDepth }) => {
-  // Tính độ sâu của node hiện tại
-  const depth = getTreeDepth(distributor.code);
-
-  return (
-    <div className="distributor" data-depth={depth}>
-      <h4>
-        {distributor.name} ({distributor.code}) - Level {depth}
-      </h4>
-      <p>Sales: {distributor.sales}</p>
-      <div className="actions">
-        <button onClick={() => onAddSales(distributor.code)}>Add Sales</button>
-        <button onClick={() => onDelete(distributor.code)}>Delete</button>
-      </div>
-
-        <div className="children">
-        {/* //{console.log(trees)} */}
-          {distributor.children.map((child) =>  (
-            <Distributor
-              key={child.code}
-              distributor={child}
-              onAddSales={onAddSales}
-              onDelete={onDelete}
-              getTreeDepth={getTreeDepth}
-            />
-          ))}
-        </div>
-
-    </div>
-  );
-};
+import Distributor from './Distributor';
+import { DistributorsProvider } from './DistributorsContext';
 
 const App = () => {
   const [trees, setTrees] = useState([]); // Các cây đã được tạo
   const [distributors, setDistributors] = useState({}); // Tất cả các nhà phân phối
 
-  const getTreeDepth = (nodeId) => {
-    const node = distributors[nodeId];
+  const getTreeDepth = (nodeId, x) => {
+    const node = x[nodeId];
     if (!node) return 0;
 
     // neu la node root
     if (!node.parentCode) return 1;
     // goi de quy
-    return getTreeDepth(node.parentCode) + 1;
+    return getTreeDepth(node.parentCode, x) + 1;
   };
 
   const addDistributor = (code, name, parentCode = "") => {
@@ -70,7 +40,7 @@ const App = () => {
     }
 
     // neu do sau cua cay bang 5, tao cay moi
-    if (getTreeDepth(parent.code) === 5) {
+    if (getTreeDepth(parent.code, distributors) === 5) {
       newDistributor.parentCode = "";
       setTrees((prevTrees) => [...prevTrees, newDistributor]);
     } else {
@@ -82,7 +52,7 @@ const App = () => {
   // parent co do sau < 5
   const addChildToTree = (parent, newDistributor) => {
     if (parent.children.length < 2) {
-      console.log("pppp", parent)
+      //console.log("pppp", parent)
       newDistributor.parentCode = parent.code;
       // const updatedParent = { ...parent, children: [...parent.children, newDistributor] };
       // setDistributors((prev) => ({ ...prev, [parent.code]: updatedParent }));
@@ -95,7 +65,7 @@ const App = () => {
       const current = queue.shift();
 
       // neu depth current = 5, tao cay moi
-      if (getTreeDepth(current.code) === 5) {
+      if (getTreeDepth(current.code, distributors) === 5) {
         newDistributor.parentCode = "";
         setTrees((prevTrees) => [...prevTrees, newDistributor]);
         return;
@@ -246,14 +216,6 @@ const App = () => {
     };
 
     trees.forEach((root) => calculate(root));
-    // console.log(distributors[1].children[0] === distributors[2])
-    // console.log({x: distributors[1].children[0], y: distributors[2]})
-    // hien thi ket qua
-    alert(
-      Object.entries(commissions)
-        .map(([code, commission]) => `${code}: ${commission.toFixed(2)}`)
-        .join("\n")
-    );
 
     // Xuat file hoa hong
     const commissionsData = Object.entries(commissions)
@@ -269,7 +231,7 @@ const App = () => {
 
     const blob = new Blob(
       [JSON.stringify({ 
-        date: new Date().toISOString(),
+        time: new Date().toLocaleString(),
         commissions: commissionsData 
       }, null, 2)],
       { type: 'text/plain' }
@@ -286,9 +248,12 @@ const App = () => {
 
   // Ham export data
   const exportData = () => {
+    const exportDistributorsData = { ...distributors };
+    Object.keys(exportDistributorsData).forEach(key => {
+      delete exportDistributorsData[key].children;
+    });
     const data = {
-      trees,
-      distributors
+      distributors : exportDistributorsData
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -311,11 +276,16 @@ const App = () => {
           const data = JSON.parse(e.target.result);
           const distributorsCopy = { ...data.distributors };
 
+          // xay dung trees dua tren du lieu distributors
           const {roots, distributors} = buildForest(distributorsCopy);
           setTrees(roots);
           setDistributors(distributors);
         } catch (error) {
-          alert('Invalid file format');
+          alert(error.message);
+          setTrees([]);
+          setDistributors({});
+        } finally {
+          event.target.value = null;
         }
       };
       reader.readAsText(file);
@@ -325,26 +295,35 @@ const App = () => {
   const buildForest = (distributorsData) => {
     const roots = [];
     const map = {};
-  
     // tao mot ban do de de dang truy cap cac distributor
     Object.values(distributorsData).forEach(distributor => {
+      if (map[distributor.code]) {
+        throw new Error(`Wrong data! Distributor ${distributor.code} is duplicated`);
+      }
       map[distributor.code] = { ...distributor, children: [] };
     });
-  
+    
     // xay dung mang cac root node
     Object.values(map).forEach(distributor => {
       if (distributor.parentCode) {
         map[distributor.parentCode].children.push(distributor);
-      } else {
+        if (map[distributor.parentCode].children.length > 2)
+{
+  throw new Error (`Wrong data! Distributor ${distributor.parentCode} has more than 2 children`);
+} else if (getTreeDepth(distributor.parentCode, map) === 5){
+  
+  throw new Error(`Wrong data! Distributor ${distributor.code} is in the 6th level`);
+}   } else {
         roots.push(distributor);
       }
     });
-  
+
     return {roots, distributors: map};
   };
   
 
   return (
+    <DistributorsProvider distributors={distributors}>
     <div className="App">
       <h1>Project 1 - Nguyen Anh Duong</h1>
 
@@ -403,6 +382,7 @@ const App = () => {
         Calculate Commissions
       </button>
     </div>
+    </DistributorsProvider>
   );
 };
 
