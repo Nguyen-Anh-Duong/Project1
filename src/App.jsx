@@ -15,9 +15,10 @@ const Distributor = ({ distributor, onAddSales, onDelete, getTreeDepth }) => {
         <button onClick={() => onAddSales(distributor.code)}>Add Sales</button>
         <button onClick={() => onDelete(distributor.code)}>Delete</button>
       </div>
-      {depth < 5 && (
+
         <div className="children">
-          {distributor.children.map((child) => (
+        {/* //{console.log(trees)} */}
+          {distributor.children.map((child) =>  (
             <Distributor
               key={child.code}
               distributor={child}
@@ -27,7 +28,7 @@ const Distributor = ({ distributor, onAddSales, onDelete, getTreeDepth }) => {
             />
           ))}
         </div>
-      )}
+
     </div>
   );
 };
@@ -62,7 +63,7 @@ const App = () => {
     }
 
     const parent = distributors[parentCode];
-
+    
     if (!parent) {
       alert("Parent distributor not found.");
       return;
@@ -81,8 +82,11 @@ const App = () => {
   // parent co do sau < 5
   const addChildToTree = (parent, newDistributor) => {
     if (parent.children.length < 2) {
-      parent.children.push(newDistributor);
+      console.log("pppp", parent)
       newDistributor.parentCode = parent.code;
+      // const updatedParent = { ...parent, children: [...parent.children, newDistributor] };
+      // setDistributors((prev) => ({ ...prev, [parent.code]: updatedParent }));
+      parent.children.push(newDistributor);
       return;
     }
     const queue = [...parent.children];
@@ -99,8 +103,10 @@ const App = () => {
 
       // Neu current co do sau < 5, kiem tra xem co them con duoc khong
       if (current.children.length < 2) {
-        current.children.push(newDistributor);
         newDistributor.parentCode = current.code;
+        // const updatedCurrent = { ...current, children: [...current.children, newDistributor] };
+        // setDistributors((prev) => ({ ...prev, [current.code]: updatedCurrent }));
+        current.children.push(newDistributor);
         return;
       }
       // neu khong them con duoc, thi tiep tuc duyet do thi
@@ -228,7 +234,7 @@ const App = () => {
   const calculateCommissions = () => {
     const commissions = {};
 
-    //ham de quy
+    //ham de quy tinh hoa hong
     const calculate = (distributor, commissionRate = 0.1) => {
       if (!distributor) return 0;
 
@@ -238,18 +244,123 @@ const App = () => {
         distributor.sales * commissionRate;
       return commissions[distributor.code];
     };
-    console.log(distributors);
 
     trees.forEach((root) => calculate(root));
+    // console.log(distributors[1].children[0] === distributors[2])
+    // console.log({x: distributors[1].children[0], y: distributors[2]})
+    // hien thi ket qua
     alert(
       Object.entries(commissions)
         .map(([code, commission]) => `${code}: ${commission.toFixed(2)}`)
         .join("\n")
     );
+
+    // Xuat file hoa hong
+    const commissionsData = Object.entries(commissions)
+      .map(([code, commission]) => {
+        const distributor = distributors[code];
+        return {
+          code,
+          name: distributor.name,
+          sales: distributor.sales,
+          commission: parseFloat(commission.toFixed(2))
+        };
+      });
+
+    const blob = new Blob(
+      [JSON.stringify({ 
+        date: new Date().toISOString(),
+        commissions: commissionsData 
+      }, null, 2)],
+      { type: 'text/plain' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `commissions.${new Date().toLocaleDateString().split('/').join('-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
+
+  // Ham export data
+  const exportData = () => {
+    const data = {
+      trees,
+      distributors
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `distributor-data.${new Date().toLocaleDateString().split('/').join('-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Ham import data
+  const importData = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          const distributorsCopy = { ...data.distributors };
+
+          const {roots, distributors} = buildForest(distributorsCopy);
+          setTrees(roots);
+          setDistributors(distributors);
+        } catch (error) {
+          alert('Invalid file format');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const buildForest = (distributorsData) => {
+    const roots = [];
+    const map = {};
+  
+    // tao mot ban do de de dang truy cap cac distributor
+    Object.values(distributorsData).forEach(distributor => {
+      map[distributor.code] = { ...distributor, children: [] };
+    });
+  
+    // xay dung mang cac root node
+    Object.values(map).forEach(distributor => {
+      if (distributor.parentCode) {
+        map[distributor.parentCode].children.push(distributor);
+      } else {
+        roots.push(distributor);
+      }
+    });
+  
+    return {roots, distributors: map};
+  };
+  
+
   return (
     <div className="App">
       <h1>Project 1 - Nguyen Anh Duong</h1>
+
+      <div className="data-controls">
+        <input
+          type="file"
+          accept=".txt"
+          onChange={importData}
+          style={{ display: 'none' }}
+          id="import-input"
+        />
+        <button onClick={() => document.getElementById('import-input').click()}>
+          Import Data
+        </button>
+        <button onClick={exportData}>Export Data</button>
+      </div>
 
       <div className="add-distributor">
         <h3>Add Distributor</h3>
@@ -262,17 +373,20 @@ const App = () => {
         />
         <button
           onClick={() =>
+          {
+            
             addDistributor(
               document.getElementById("code").value,
               document.getElementById("name").value,
               document.getElementById("parentCode").value
             )
+            
+          }
           }
         >
           Add
         </button>
       </div>
-
       <div className="trees">
         {trees.map((tree) => (
           <Distributor

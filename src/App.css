@@ -111,3 +111,10 @@
     font-size: 1.1em;
     padding: 10px 20px;
   }
+
+  .data-controls {
+    margin: 20px 0;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
